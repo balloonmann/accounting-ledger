@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Journal Entries — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Posted Journal Entries</h1>
+    <p class="page-subtitle">Permanent, immutable financial transactions recorded in the household ledger</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'entry_journal' %}" class="btn btn-primary">+ New Journal</a>
+  </div>
+</div>
+
+<div class="card">
+  {% if entries %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Posting #</th>
+            <th>Type</th>
+            <th>Narration</th>
+            <th>Creator</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+          <tr>
+            <td class="mono"><strong>{{ entry.date|date:"Y-m-d" }}</strong></td>
+            <td class="mono">#{{ entry.posting_number }}</td>
+            <td><span class="badge">{{ entry.get_kind_display }}</span></td>
+            <td>
+              {{ entry.narration|default:"(No narration)" }}
+              {% if entry.reversal_of %}
+                <br><small class="muted">Reverses Posting #{{ entry.reversal_of.posting_number }}</small>
+              {% endif %}
+            </td>
+            <td>{{ entry.creator.username }}</td>
+            <td>
+              {% if entry.reversal %}
+                <span class="badge badge-reversed">Reversed</span>
+              {% else %}
+                <span class="badge badge-posted">Posted</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'entry_detail' pk=entry.pk %}" class="btn btn-secondary btn-sm">View Details</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 40px 20px;">
+      <p style="font-size: 16px; color: var(--text-muted); margin-bottom: 16px;">
+        No posted entries found.
+      </p>
+      <a href="{% url 'home' %}" class="btn btn-secondary">Go to Dashboard</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

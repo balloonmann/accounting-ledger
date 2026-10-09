@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Posting Lock Date — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Posting Lock Date</h1>
+    <p class="page-subtitle">Freeze historical financial periods against postings and reversals</p>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-title">Current Period Status</div>
+  <p style="margin-top: 8px;">
+    Current lock date:
+    {% if current_locked_through %}
+      <strong class="mono" style="font-size: 1.1rem; color: var(--color-danger, #e53e3e);">{{ current_locked_through|date:"Y-m-d" }}</strong>
+      <span class="badge badge-reversed" style="margin-left: 8px;">Transactions on or before this date are frozen</span>
+    {% else %}
+      <strong class="mono" style="font-size: 1.1rem; color: var(--color-success, #38a169);">No lock active</strong>
+      <span class="badge badge-posted" style="margin-left: 8px;">All transaction dates open</span>
+    {% endif %}
+  </p>
+  <p class="muted" style="font-size: 0.85rem; margin-top: 8px;">
+    The posting engine serializes all journal entries and lock changes using database locking. Any transaction dated on or before the locked date is rejected at the database posting boundary.
+  </p>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-title">Update Lock Date</div>
+  <form method="post" style="margin-top: 16px;">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="notice notice-error" style="margin-bottom: 16px;">
+        {% for err in form.non_field_errors %}{{ err }}<br>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="form-group">
+      <label for="{{ form.locked_through.id_for_label }}">New Lock Date (Locked Through)</label>
+      {{ form.locked_through }}
+      <small class="muted">{{ form.locked_through.help_text }}</small>
+      {% if form.locked_through.errors %}
+        <span class="text-danger">{{ form.locked_through.errors }}</span>
+      {% endif %}
+    </div>
+
+    <div class="form-group" style="margin-top: 12px;">
+      <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+        {{ form.clear_lock }}
+        <span><strong>{{ form.clear_lock.label }}</strong></span>
+      </label>
+    </div>
+
+    <div class="form-group" style="margin-top: 16px;">
+      <label for="{{ form.reason.id_for_label }}">Reason for Lock Date Change <span style="color: red;">*</span></label>
+      {{ form.reason }}
+      <small class="muted">{{ form.reason.help_text }}</small>
+      {% if form.reason.errors %}
+        <span class="text-danger">{{ form.reason.errors }}</span>
+      {% endif %}
+    </div>
+
+    <div style="margin-top: 24px;">
+      <button type="submit" class="btn btn-primary">Update Lock Date</button>
+    </div>
+  </form>
+</div>
+
+{% if recent_logs %}
+<div class="card">
+  <div class="card-title">Lock Date Change Audit Log</div>
+  <div class="table-wrap" style="margin-top: 12px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Administrator</th>
+          <th>Previous Date</th>
+          <th>New Date</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent_logs %}
+        <tr>
+          <td class="mono">{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+          <td><strong>{{ log.actor.username }}</strong></td>
+          <td class="mono">{{ log.metadata.old_date|default:"None" }}</td>
+          <td class="mono"><strong>{{ log.metadata.new_date|default:"None" }}</strong></td>
+          <td>{{ log.metadata.reason }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Record Income — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">💰 Record Income</h1>
+    <p class="page-subtitle">Record earnings or receipts into household cash or bank</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'home' %}" class="btn btn-secondary">← Cancel</a>
+  </div>
+</div>
+
+<div class="card" style="max-width: 680px; margin: 0 auto;">
+  <form method="post">
+    {% csrf_token %}
+    {{ form.idempotency_key }}
+
+    {% if form.non_field_errors %}
+      <div class="notice notice-error">
+        {% for error in form.non_field_errors %}{{ error }}<br>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.date.id_for_label }}">Transaction Date *</label>
+        {{ form.date }}
+        {% if form.date.errors %}<p class="error">{{ form.date.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.amount.id_for_label }}">Amount (INR ₹) *</label>
+        {{ form.amount }}
+        {% if form.amount.errors %}<p class="error">{{ form.amount.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.destination_account.id_for_label }}">Received Into (Cash / Bank) *</label>
+      {{ form.destination_account }}
+      <p class="form-help">The asset account that receives funds (debited)</p>
+      {% if form.destination_account.errors %}<p class="error">{{ form.destination_account.errors.0 }}</p>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.income_account.id_for_label }}">Income Category *</label>
+      {{ form.income_account }}
+      <p class="form-help">The source or nature of income (credited)</p>
+      {% if form.income_account.errors %}<p class="error">{{ form.income_account.errors.0 }}</p>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.narration.id_for_label }}">Description / Notes *</label>
+      {{ form.narration }}
+      {% if form.narration.errors %}<p class="error">{{ form.narration.errors.0 }}</p>{% endif %}
+    </div>
+
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button type="submit" name="action" value="post" class="btn btn-primary">Post Income Immediately</button>
+      <button type="submit" name="action" value="draft" class="btn btn-secondary">Save as Draft</button>
+      <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

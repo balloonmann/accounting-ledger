@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Full Journal Entry — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">📝 Full Journal Entry</h1>
+    <p class="page-subtitle">Multi-line double entry transaction with live debit/credit balancing</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'home' %}" class="btn btn-secondary">← Cancel</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="post" id="journal-form">
+    {% csrf_token %}
+    {{ header_form.idempotency_key }}
+
+    {% if errors %}
+      <div class="notice notice-error">
+        {% for err in errors %}{{ err }}<br>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="form-row" style="margin-bottom: 24px;">
+      <div class="form-group">
+        <label class="form-label" for="{{ header_form.date.id_for_label }}">Transaction Date *</label>
+        {{ header_form.date }}
+        {% if header_form.date.errors %}<p class="error">{{ header_form.date.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group" style="flex: 2;">
+        <label class="form-label" for="{{ header_form.narration.id_for_label }}">Narration / Description *</label>
+        {{ header_form.narration }}
+        {% if header_form.narration.errors %}<p class="error">{{ header_form.narration.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="card-title">
+      <span>Journal Lines (Minimum 2 Lines)</span>
+      <button type="button" class="btn btn-secondary btn-sm" id="add-line-btn">+ Add Line</button>
+    </div>
+
+    <div class="table-wrap">
+      <table id="lines-table">
+        <thead>
+          <tr>
+            <th style="width: 50px;">#</th>
+            <th>Account *</th>
+            <th class="amount" style="width: 180px;">Debit (INR)</th>
+            <th class="amount" style="width: 180px;">Credit (INR)</th>
+            <th style="width: 70px;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="lines-tbody">
+          {% for row in line_rows %}
+          <tr class="line-row">
+            <td class="line-num mono">{{ forloop.counter }}</td>
+            <td>
+              <select name="line_account[]" class="form-control line-account">
+                <option value="">— Select Account —</option>
+                {% for acc in postable_accounts %}
+                  <option value="{{ acc.pk }}" {% if row.account_id == acc.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ acc.code }} — {{ acc.name }} ({{ acc.get_reporting_class_display }})
+                  </option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <input type="number" step="0.01" min="0" name="line_debit[]" class="form-control line-debit amount" placeholder="0.00" value="{{ row.debit|default:'' }}">
+            </td>
+            <td>
+              <input type="number" step="0.01" min="0" name="line_credit[]" class="form-control line-credit amount" placeholder="0.00" value="{{ row.credit|default:'' }}">
+            </td>
+            <td>
+              <button type="button" class="btn btn-danger btn-sm remove-line-btn" title="Remove row">✕</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Live Balancing Indicator Bar -->
+    <div class="journal-balance-bar">
+      <div class="balance-item">
+        <span class="balance-label">Total Debits</span>
+        <span class="balance-val" id="total-debit-val">₹0.00</span>
+      </div>
+      <div class="balance-item">
+        <span class="balance-label">Total Credits</span>
+        <span class="balance-val" id="total-credit-val">₹0.00</span>
+      </div>
+      <div class="balance-item">
+        <span class="balance-label">Difference</span>
+        <span class="balance-val" id="difference-val">₹0.00</span>
+      </div>
+      <div>
+        <span id="balance-status-badge" class="balance-status status-unbalanced">Unbalanced</span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button type="submit" name="action" value="post" id="post-btn" class="btn btn-primary">Post Journal Entry</button>
+      <button type="submit" name="action" value="draft" class="btn btn-secondary">Save as Draft</button>
+      <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<!-- Template for adding new lines in JS -->
+<template id="line-template">
+  <tr class="line-row">
+    <td class="line-num mono"></td>
+    <td>
+      <select name="line_account[]" class="form-control line-account">
+        <option value="">— Select Account —</option>
+        {% for acc in postable_accounts %}
+          <option value="{{ acc.pk }}">{{ acc.code }} — {{ acc.name }} ({{ acc.get_reporting_class_display }})</option>
+        {% endfor %}
+      </select>
+    </td>
+    <td>
+      <input type="number" step="0.01" min="0" name="line_debit[]" class="form-control line-debit amount" placeholder="0.00" value="">
+    </td>
+    <td>
+      <input type="number" step="0.01" min="0" name="line_credit[]" class="form-control line-credit amount" placeholder="0.00" value="">
+    </td>
+    <td>
+      <button type="button" class="btn btn-danger btn-sm remove-line-btn" title="Remove row">✕</button>
+    </td>
+  </tr>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document vue = false;
+(function() {
+  const tbody = document.getElementById('lines-tbody');
+  const addBtn = document.getElementById('add-line-btn');
+  const template = document.getElementById('line-template');
+  const totalDebitEl = document.getElementById('total-debit-val');
+  const totalCreditEl = document.getElementById('total-credit-val');
+  const diffEl = document.getElementById('difference-val');
+  const statusBadge = document.getElementById('balance-status-badge');
+
+  function renumberRows() {
+    const rows = tbody.querySelectorAll('.line-row');
+    rows.forEach((row, idx) => {
+      row.querySelector('.line-num').textContent = (idx + 1);
+    });
+  }
+
+  function recalculate() {
+    let totalDebit = 0;
+    let totalCredit = 0;
+
+    const debitInputs = tbody.querySelectorAll('.line-debit');
+    const creditInputs = tbody.querySelectorAll('.line-credit');
+
+    debitInputs.forEach(input => {
+      const val = parseFloat(input.value) || 0;
+      totalDebit += val;
+    });
+
+    creditInputs.forEach(input => {
+      const val = parseFloat(input.value) || 0;
+      totalCredit += val;
+    });
+
+    const diff = Math.abs(totalDebit - totalCredit);
+
+    totalDebitEl.textContent = '₹' + totalDebit.toFixed(2);
+    totalCreditEl.textContent = '₹' + totalCredit.toFixed(2);
+    diffEl.textContent = '₹' + diff.toFixed(2);
+
+    const isBalanced = (diff < 0.005) && (totalDebit > 0);
+
+    if (isBalanced) {
+      statusBadge.textContent = '✓ Balanced';
+      statusBadge.className = 'balance-status status-balanced';
+    } else {
+      statusBadge.textContent = '✕ Unbalanced (Diff: ₹' + diff.toFixed(2) + ')';
+      statusBadge.className = 'balance-status status-unbalanced';
+    }
+  }
+
+  // Event delegation on table
+  tbody.addEventListener('input', function(e) {
+    if (e.target.classList.contains('line-debit')) {
+      if (parseFloat(e.target.value) > 0) {
+        // Clear opposite credit side
+        const row = e.target.closest('tr');
+        row.querySelector('.line-credit').value = '';
+      }
+      recalculate();
+    } else if (e.target.classList.contains('line-credit')) {
+      if (parseFloat(e.target.value) > 0) {
+        // Clear opposite debit side
+        const row = e.target.closest('tr');
+        row.querySelector('.line-debit').value = '';
+      }
+      recalculate();
+    }
+  });
+
+  tbody.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-line-btn')) {
+      const rows = tbody.querySelectorAll('.line-row');
+      if (rows.length <= 2) {
+        alert('A journal entry requires at least 2 lines.');
+        return;
+      }
+      e.target.closest('tr').remove();
+      renumberRows();
+      recalculate();
+    }
+  });
+
+  addBtn.addEventListener('click', function() {
+    const clone = template.content.cloneNode(true);
+    tbody.appendChild(clone);
+    renumberRows();
+    recalculate();
+  });
+
+  // Initial calculation on load
+  renumberRows();
+  recalculate();
+})();
+</script>
+{% endblock %}

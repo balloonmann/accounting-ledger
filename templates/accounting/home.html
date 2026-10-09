@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ book.name|default:"Household Ledger" }}</h1>
+    <p class="page-subtitle">Personal and shared double-entry accounting for the household</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'entry_expense' %}" class="btn btn-primary">💸 New Expense</a>
+    <a href="{% url 'entry_income' %}" class="btn btn-secondary">💰 New Income</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">Accessible Accounts</div>
+    <div class="stat-value">{{ accounts.count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pending Drafts</div>
+    <div class="stat-value">
+      {{ drafts_count }}
+      {% if drafts_count > 0 %}
+        <a href="{% url 'draft_list' %}" class="btn btn-secondary btn-sm" style="margin-left: 8px;">Review</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Posting Lock Date</div>
+    <div class="stat-value" style="font-size: 18px;">
+      {% if book.locked_through %}
+        Through {{ book.locked_through|date:"d M Y" }}
+      {% else %}
+        No lock active
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">
+    <span>Quick Entry Workflows</span>
+  </div>
+  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+    <a href="{% url 'entry_expense' %}" class="btn btn-secondary">💸 Record Expense</a>
+    <a href="{% url 'entry_income' %}" class="btn btn-secondary">💰 Record Income</a>
+    <a href="{% url 'entry_transfer' %}" class="btn btn-secondary">🔄 Account Transfer</a>
+    <a href="{% url 'entry_journal' %}" class="btn btn-secondary">📝 Full Journal Entry</a>
+    {% if is_admin %}
+    <a href="{% url 'entry_opening' %}" class="btn btn-secondary">⚖️ Initial Opening Balance</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">
+    <span>Your Accessible Accounts</span>
+    <span class="badge">{{ accounts.count }} accounts</span>
+  </div>
+  {% if accounts %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Code</th><th>Account Name</th><th>Classification</th><th>Access</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for account in accounts %}
+        <tr>
+          <td class="mono"><strong>{{ account.code }}</strong></td>
+          <td>{{ account.name }}{% if account.is_group %} <span class="badge">Group</span>{% endif %}</td>
+          <td>{{ account.get_reporting_class_display }}</td>
+          <td>{{ account.get_visibility_display }}</td>
+          <td>
+            {% if account.is_active %}<span class="badge badge-posted">Active</span>{% else %}<span class="badge badge-reversed">Inactive</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">No accessible accounts available.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-title">
+    <span>Recent Posted Activity</span>
+    <a href="{% url 'entry_list' %}" class="btn btn-secondary btn-sm">View All Entries</a>
+  </div>
+  {% if recent_entries %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Posting #</th>
+            <th>Type</th>
+            <th>Narration</th>
+            <th>Creator</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in recent_entries %}
+          <tr>
+            <td class="mono">{{ entry.date|date:"Y-m-d" }}</td>
+            <td class="mono">#{{ entry.posting_number }}</td>
+            <td><span class="badge">{{ entry.get_kind_display }}</span></td>
+            <td>{{ entry.narration|default:"—" }}</td>
+            <td>{{ entry.creator.username }}</td>
+            <td>
+              {% if entry.reversal %}
+                <span class="badge badge-reversed">Reversed</span>
+              {% else %}
+                <span class="badge badge-posted">Posted</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'entry_detail' pk=entry.pk %}" class="btn btn-secondary btn-sm">View</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No posted transactions recorded yet. Use the workflows above to post transactions.</p>
+  {% endif %}
+</div>
+{% endblock %}

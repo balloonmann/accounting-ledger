@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ title }}</h1>
+    <p class="page-subtitle">Configure chart of accounts attributes and classification</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'account_list' %}" class="btn btn-secondary">← Back to Accounts</a>
+  </div>
+</div>
+
+<div class="card" style="max-width: 760px; margin: 0 auto;">
+  <form method="post">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="notice notice-error">
+        {% for error in form.non_field_errors %}{{ error }}<br>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.code.id_for_label }}">Account Code *</label>
+        {{ form.code }}
+        {% if form.code.errors %}<p class="error">{{ form.code.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.name.id_for_label }}">Account Name *</label>
+        {{ form.name }}
+        {% if form.name.errors %}<p class="error">{{ form.name.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.reporting_class.id_for_label }}">Reporting Class *</label>
+        {{ form.reporting_class }}
+        {% if form.reporting_class.help_text %}<p class="form-help">{{ form.reporting_class.help_text }}</p>{% endif %}
+        {% if form.reporting_class.errors %}<p class="error">{{ form.reporting_class.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.classical_type.id_for_label }}">Classical Type *</label>
+        {{ form.classical_type }}
+        {% if form.classical_type.help_text %}<p class="form-help">{{ form.classical_type.help_text }}</p>{% endif %}
+        {% if form.classical_type.errors %}<p class="error">{{ form.classical_type.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.purpose.id_for_label }}">Account Purpose *</label>
+        {{ form.purpose }}
+        {% if form.purpose.help_text %}<p class="form-help">{{ form.purpose.help_text }}</p>{% endif %}
+        {% if form.purpose.errors %}<p class="error">{{ form.purpose.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.normal_side.id_for_label }}">Normal Side *</label>
+        {{ form.normal_side }}
+        {% if form.normal_side.help_text %}<p class="form-help">{{ form.normal_side.help_text }}</p>{% endif %}
+        {% if form.normal_side.errors %}<p class="error">{{ form.normal_side.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.parent.id_for_label }}">Parent Group</label>
+        {{ form.parent }}
+        {% if form.parent.help_text %}<p class="form-help">{{ form.parent.help_text }}</p>{% endif %}
+        {% if form.parent.errors %}<p class="error">{{ form.parent.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 32px;">
+        {{ form.is_group }}
+        <label for="{{ form.is_group.id_for_label }}" style="margin: 0; font-weight: 500;">
+          Is a Summary Group (cannot receive postings)
+        </label>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.visibility.id_for_label }}">Visibility *</label>
+        {{ form.visibility }}
+        {% if form.visibility.errors %}<p class="error">{{ form.visibility.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.owner.id_for_label }}">Account Owner (for Personal visibility)</label>
+        {{ form.owner }}
+        {% if form.owner.errors %}<p class="error">{{ form.owner.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+      {{ form.is_active }}
+      <label for="{{ form.is_active.id_for_label }}" style="margin: 0; font-weight: 500;">
+        Active (can receive postings if a leaf)
+      </label>
+    </div>
+
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button type="submit" class="btn btn-primary">{{ action }}</button>
+      <a href="{% url 'account_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

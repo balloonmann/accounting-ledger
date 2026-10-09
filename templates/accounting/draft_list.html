@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Draft Entries — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Pending Drafts</h1>
+    <p class="page-subtitle">Uncommitted transactions awaiting review or posting</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'entry_journal' %}" class="btn btn-primary">+ New Journal</a>
+  </div>
+</div>
+
+<div class="card">
+  {% if drafts %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Narration</th>
+            <th>Creator</th>
+            <th>Lines</th>
+            <th>Version</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for draft in drafts %}
+          <tr>
+            <td class="mono">{{ draft.date|date:"Y-m-d" }}</td>
+            <td><span class="badge badge-draft">{{ draft.get_kind_display }}</span></td>
+            <td>
+              <strong>{{ draft.narration|default:"(No narration)" }}</strong>
+              {% if draft.replacement_of %}
+                <br><small class="muted">Replacement of Posting #{{ draft.replacement_of.posting_number }}</small>
+              {% endif %}
+            </td>
+            <td>{{ draft.creator.username }}</td>
+            <td class="mono">{{ draft.lines.count }}</td>
+            <td class="mono">v{{ draft.version }}</td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <a href="{% url 'draft_edit' pk=draft.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+                <form method="post" action="{% url 'draft_post' pk=draft.pk %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-primary btn-sm">Post</button>
+                </form>
+                <form method="post" action="{% url 'draft_delete' pk=draft.pk %}" style="display:inline;" onsubmit="return confirm('Permanently discard this draft?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 40px 20px;">
+      <p style="font-size: 16px; color: var(--text-muted); margin-bottom: 16px;">
+        No pending drafts found.
+      </p>
+      <a href="{% url 'home' %}" class="btn btn-secondary">Go to Dashboard</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

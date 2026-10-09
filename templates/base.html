@@ -1,0 +1,91 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Household Ledger{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <a class="brand-wrap" href="{% url 'home' %}">
+        <div class="brand-icon">₹</div>
+        <div class="brand-text">Household Ledger</div>
+      </a>
+
+      {% if user.is_authenticated %}
+      <nav>
+        <a href="{% url 'home' %}">Dashboard</a>
+        <a href="{% url 'account_list' %}">Accounts</a>
+        
+        <div class="dropdown">
+          <button class="nav-dropdown-btn">New Entry ▾</button>
+          <div class="dropdown-content">
+            <a href="{% url 'entry_expense' %}">💸 Expense</a>
+            <a href="{% url 'entry_income' %}">💰 Income</a>
+            <a href="{% url 'entry_transfer' %}">🔄 Transfer</a>
+            <a href="{% url 'entry_journal' %}">📝 Full Journal</a>
+            {% if user.role == "ADMIN" %}
+            <a href="{% url 'entry_opening' %}">⚖️ Opening Balance</a>
+            {% endif %}
+          </div>
+        </div>
+
+        <a href="{% url 'draft_list' %}">Drafts</a>
+        <a href="{% url 'entry_list' %}">Entries</a>
+
+        {% if user.role == "ADMIN" %}
+        <div class="dropdown">
+          <button class="nav-dropdown-btn">Reports ▾</button>
+          <div class="dropdown-content">
+            <a href="{% url 'trial_balance' %}">⚖️ Trial Balance</a>
+            <a href="{% url 'income_expenditure' %}">📊 Income & Expenditure</a>
+          </div>
+        </div>
+
+        <div class="dropdown">
+          <button class="nav-dropdown-btn">Admin ▾</button>
+          <div class="dropdown-content">
+            <a href="{% url 'user_list' %}">👥 Household Users</a>
+            <a href="{% url 'settings_lock_date' %}">🔒 Posting Lock Date</a>
+          </div>
+        </div>
+        {% endif %}
+      </nav>
+
+      <div class="identity-bar">
+        <span><strong>{{ user.username }}</strong></span>
+        {% if user.role == "ADMIN" %}
+          <span class="badge badge-admin">Admin</span>
+        {% else %}
+          <span class="badge badge-member">Member</span>
+        {% endif %}
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-secondary btn-sm">Sign out</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <main>
+    {% if messages %}
+      {% for message in messages %}
+        <div class="notice notice-{{ message.tags|default:'info' }}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    Household Ledger ERP · Base Currency INR (₹) · April–March Financial Year
+  </footer>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Record Expense — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">💸 Record Expense</h1>
+    <p class="page-subtitle">Record an expenditure from cash or bank to an expense category</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'home' %}" class="btn btn-secondary">← Cancel</a>
+  </div>
+</div>
+
+<div class="card" style="max-width: 680px; margin: 0 auto;">
+  <form method="post">
+    {% csrf_token %}
+    {{ form.idempotency_key }}
+
+    {% if form.non_field_errors %}
+      <div class="notice notice-error">
+        {% for error in form.non_field_errors %}{{ error }}<br>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.date.id_for_label }}">Transaction Date *</label>
+        {{ form.date }}
+        {% if form.date.errors %}<p class="error">{{ form.date.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.amount.id_for_label }}">Amount (INR ₹) *</label>
+        {{ form.amount }}
+        {% if form.amount.errors %}<p class="error">{{ form.amount.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.source_account.id_for_label }}">Paid From (Cash / Bank) *</label>
+      {{ form.source_account }}
+      <p class="form-help">The asset account that money leaves (credited)</p>
+      {% if form.source_account.errors %}<p class="error">{{ form.source_account.errors.0 }}</p>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.expense_account.id_for_label }}">Expense Category *</label>
+      {{ form.expense_account }}
+      <p class="form-help">The category of spending (debited)</p>
+      {% if form.expense_account.errors %}<p class="error">{{ form.expense_account.errors.0 }}</p>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.narration.id_for_label }}">Description / Notes *</label>
+      {{ form.narration }}
+      {% if form.narration.errors %}<p class="error">{{ form.narration.errors.0 }}</p>{% endif %}
+    </div>
+
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button type="submit" name="action" value="post" class="btn btn-primary">Post Expense Immediately</button>
+      <button type="submit" name="action" value="draft" class="btn btn-secondary">Save as Draft</button>
+      <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Reverse Posting #{{ entry.posting_number }} — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">↩ Reverse Entry: Posting #{{ entry.posting_number }}</h1>
+    <p class="page-subtitle">Creates an linked offsetting entry with inverted debits and credits</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'entry_detail' pk=entry.pk %}" class="btn btn-secondary">← Back to Posting</a>
+  </div>
+</div>
+
+<div class="card" style="max-width: 680px; margin: 0 auto;">
+  <div class="notice notice-error" style="margin-bottom: 24px;">
+    <strong>Important:</strong> Reversing this entry will immediately post an offsetting transaction that negates all debits and credits of Posting #{{ entry.posting_number }}. Financial history is strictly preserved and cannot be deleted.
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.idempotency_key }}
+
+    {% if form.non_field_errors %}
+      <div class="notice notice-error">
+        {% for error in form.non_field_errors %}{{ error }}<br>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.reversal_date.id_for_label }}">Reversal Accounting Date *</label>
+      {{ form.reversal_date }}
+      <p class="form-help">Must be after the posting lock date</p>
+      {% if form.reversal_date.errors %}<p class="error">{{ form.reversal_date.errors.0 }}</p>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.narration.id_for_label }}">Reason for Reversal *</label>
+      {{ form.narration }}
+      {% if form.narration.errors %}<p class="error">{{ form.narration.errors.0 }}</p>{% endif %}
+    </div>
+
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button type="submit" class="btn btn-danger">Confirm and Post Reversal</button>
+      <a href="{% url 'entry_detail' pk=entry.pk %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

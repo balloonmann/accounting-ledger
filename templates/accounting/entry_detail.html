@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Posting #{{ entry.posting_number }} — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <h1 class="page-title">Posting #{{ entry.posting_number }}</h1>
+      {% if is_reversed %}
+        <span class="badge badge-reversed" style="font-size: 13px;">Reversed</span>
+      {% else %}
+        <span class="badge badge-posted" style="font-size: 13px;">Posted</span>
+      {% endif %}
+    </div>
+    <p class="page-subtitle">{{ entry.get_kind_display }} · Recorded on {{ entry.date|date:"d M Y" }}</p>
+  </div>
+  <div class="page-actions">
+    {% if can_reverse %}
+      <a href="{% url 'entry_reverse' pk=entry.pk %}" class="btn btn-danger">↩ Reverse Entry</a>
+    {% endif %}
+    {% if is_reversed %}
+      <a href="{% url 'entry_replace' pk=entry.pk %}" class="btn btn-primary">+ Create Corrected Replacement</a>
+    {% endif %}
+    <a href="{% url 'entry_list' %}" class="btn btn-secondary">← Back to Entries</a>
+  </div>
+</div>
+
+{% if is_reversed %}
+  <div class="notice notice-error">
+    This transaction was reversed by 
+    <a href="{% url 'entry_detail' pk=reversal_entry.pk %}">
+      <strong>Posting #{{ reversal_entry.posting_number }}</strong>
+    </a> 
+    on {{ reversal_entry.date|date:"d M Y" }}.
+  </div>
+{% endif %}
+
+{% if entry.reversal_of %}
+  <div class="notice notice-info">
+    This transaction is a reversal of 
+    <a href="{% url 'entry_detail' pk=entry.reversal_of.pk %}">
+      <strong>Posting #{{ entry.reversal_of.posting_number }}</strong>
+    </a>.
+  </div>
+{% endif %}
+
+{% if entry.replacement_of %}
+  <div class="notice notice-info">
+    This transaction is a replacement for 
+    <a href="{% url 'entry_detail' pk=entry.replacement_of.pk %}">
+      <strong>Posting #{{ entry.replacement_of.posting_number }}</strong>
+    </a>.
+  </div>
+{% endif %}
+
+<div class="card">
+  <div class="card-title">Transaction Header</div>
+  <div class="stats-grid" style="margin-bottom: 0;">
+    <div class="stat-card">
+      <div class="stat-label">Accounting Date</div>
+      <div class="stat-value" style="font-size: 18px;">{{ entry.date|date:"Y-m-d" }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Entry Kind</div>
+      <div class="stat-value" style="font-size: 18px;">{{ entry.get_kind_display }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Created By</div>
+      <div class="stat-value" style="font-size: 18px;">{{ entry.creator.username }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Posted Timestamp</div>
+      <div class="stat-value" style="font-size: 14px;">{{ entry.posted_at|date:"Y-m-d H:i:s" }} UTC</div>
+    </div>
+  </div>
+
+  <div style="margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border-light);">
+    <strong style="font-size: 13.5px; color: var(--text-dim);">NARRATION:</strong>
+    <p style="margin-top: 6px; font-size: 15px;">{{ entry.narration|default:"(No narration provided)" }}</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">
+    <span>Journal Lines</span>
+    <span class="badge">{{ lines|length }} lines</span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 50px;">#</th>
+          <th>Account Code</th>
+          <th>Account Name</th>
+          <th>Class</th>
+          <th class="amount" style="width: 180px;">Debit (INR)</th>
+          <th class="amount" style="width: 180px;">Credit (INR)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for line in lines %}
+        <tr>
+          <td class="mono">{{ line.line_number }}</td>
+          <td class="mono"><strong>{{ line.account.code }}</strong></td>
+          <td>{{ line.account.name }}</td>
+          <td><span class="badge">{{ line.account.get_reporting_class_display }}</span></td>
+          <td class="amount">
+            {% if line.debit > 0 %}₹{{ line.debit }}{% else %}—{% endif %}
+          </td>
+          <td class="amount">
+            {% if line.credit > 0 %}₹{{ line.credit }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background: #f8faf9; font-weight: 700; border-top: 2px solid var(--border-light);">
+          <td colspan="4" style="text-align: right; padding: 14px;">TOTAL</td>
+          <td class="amount" style="color: var(--primary);">₹{{ total_debit }}</td>
+          <td class="amount" style="color: var(--primary);">₹{{ total_credit }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

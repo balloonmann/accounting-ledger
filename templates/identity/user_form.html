@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ title }}</h1>
+    <p class="page-subtitle">Configure account credentials and permissions</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'user_list' %}" class="btn btn-secondary">← Back to Users</a>
+  </div>
+</div>
+
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+  <form method="post">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="notice notice-error">
+        {% for error in form.non_field_errors %}{{ error }}<br>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.username.id_for_label }}">Username *</label>
+      {{ form.username }}
+      {% if form.username.errors %}<p class="error">{{ form.username.errors.0 }}</p>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.role.id_for_label }}">Household Role *</label>
+      {{ form.role }}
+      <p class="form-help">Admins can manage accounts, users, and posting lock dates. Members only record transactions and view permitted accounts.</p>
+      {% if form.role.errors %}<p class="error">{{ form.role.errors.0 }}</p>{% endif %}
+    </div>
+
+    {% if form.password %}
+    <div class="form-group">
+      <label class="form-label" for="{{ form.password.id_for_label }}">Password *</label>
+      {{ form.password }}
+      <p class="form-help">{{ form.password.help_text }}</p>
+      {% if form.password.errors %}<p class="error">{{ form.password.errors.0 }}</p>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if form.new_password %}
+    <div class="form-group">
+      <label class="form-label" for="{{ form.new_password.id_for_label }}">Reset Password</label>
+      {{ form.new_password }}
+      <p class="form-help">{{ form.new_password.help_text }}</p>
+      {% if form.new_password.errors %}<p class="error">{{ form.new_password.errors.0 }}</p>{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 20px;">
+      {{ form.is_active }}
+      <label for="{{ form.is_active.id_for_label }}" style="margin: 0; font-weight: 500;">
+        Active (permitted to log in)
+      </label>
+    </div>
+
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button type="submit" class="btn btn-primary">{{ action }}</button>
+      <a href="{% url 'user_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

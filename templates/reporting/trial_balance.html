@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Trial Balance — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Trial Balance</h1>
+    <p class="page-subtitle">Cumulative debit and credit balances of all active leaf accounts through selected date</p>
+  </div>
+  <div class="page-actions">
+    <a href="?as_of_date={{ as_of_date }}&export=csv" class="btn btn-secondary">📥 Export CSV</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <form method="get" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 200px;">
+      <label for="as_of_date" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">As-of Date</label>
+      <input type="date" name="as_of_date" id="as_of_date" class="form-control" value="{{ as_of_date }}">
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary">Generate Report</button>
+    </div>
+  </form>
+</div>
+
+<div class="summary-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+  <div class="card">
+    <div class="card-title">Total Debits</div>
+    <div class="amount mono" style="font-size: 1.5rem; font-weight: 700; margin-top: 8px; color: var(--color-primary, #4338ca);">₹ {{ report.grand_total_debit }}</div>
+    <small class="muted">Cumulative debit side</small>
+  </div>
+  <div class="card">
+    <div class="card-title">Total Credits</div>
+    <div class="amount mono" style="font-size: 1.5rem; font-weight: 700; margin-top: 8px; color: var(--color-primary, #4338ca);">₹ {{ report.grand_total_credit }}</div>
+    <small class="muted">Cumulative credit side</small>
+  </div>
+  <div class="card">
+    <div class="card-title">Balance Status</div>
+    <div style="margin-top: 8px;">
+      {% if report.is_balanced %}
+        <span class="badge badge-posted" style="font-size: 1rem; padding: 6px 12px;">✓ Books Balanced</span>
+      {% else %}
+        <span class="badge badge-reversed" style="font-size: 1rem; padding: 6px 12px;">⚠ Imbalance Detected</span>
+      {% endif %}
+    </div>
+    <small class="muted">Debits equal Credits</small>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Account Code</th>
+          <th>Account Name</th>
+          <th style="text-align: right;">Debit Balance (₹)</th>
+          <th style="text-align: right;">Credit Balance (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for class_code, rows in report.grouped_accounts.items %}
+          {% if rows %}
+            <tr style="background-color: var(--color-bg-subtle, #f9fafb); font-weight: 700;">
+              <td colspan="4" style="color: var(--color-primary, #4338ca); text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em;">
+                {{ class_code }}
+              </td>
+            </tr>
+            {% for r in rows %}
+            <tr>
+              <td class="mono">
+                <a href="{% url 'account_ledger' pk=r.account.pk %}"><strong>{{ r.code }}</strong></a>
+              </td>
+              <td>{{ r.name }}</td>
+              <td style="text-align: right;" class="mono">
+                {% if r.debit_balance > 0 %}₹ {{ r.debit_balance }}{% else %}—{% endif %}
+              </td>
+              <td style="text-align: right;" class="mono">
+                {% if r.credit_balance > 0 %}₹ {{ r.credit_balance }}{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+        <tr style="background-color: var(--color-bg-subtle, #f9fafb); font-weight: 800; font-size: 1.05rem; border-top: 2px solid var(--color-border, #e5e7eb);">
+          <td colspan="2">Trial Balance Totals</td>
+          <td style="text-align: right;" class="mono">₹ {{ report.grand_total_debit }}</td>
+          <td style="text-align: right;" class="mono">₹ {{ report.grand_total_credit }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

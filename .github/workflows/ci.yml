@@ -1,0 +1,57 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Lint, Migrations & Isolated PostgreSQL Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: ci_super_password_12345
+          POSTGRES_DB: ledger_test_control
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies from locked requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install --require-hashes -r requirements.lock
+
+      - name: Verify Django system integrity
+        run: |
+          DJANGO_SECRET_KEY=ci-dummy-key-minimum-50-characters-long-12345678901234567890 \
+          DATABASE_URL=postgresql://postgres:ci_super_password_12345@127.0.0.1:5432/ledger_test_control \
+          python manage.py check
+
+      - name: Verify no uncommitted migrations
+        run: |
+          DJANGO_SECRET_KEY=ci-dummy-key-minimum-50-characters-long-12345678901234567890 \
+          DATABASE_URL=postgresql://postgres:ci_super_password_12345@127.0.0.1:5432/ledger_test_control \
+          python manage.py makemigrations --check --dry-run
+
+      - name: Run automated test suite with isolated roles
+        run: |
+          python scripts/test.py apps.accounting.tests apps.identity.tests apps.reporting.tests apps.operations.tests

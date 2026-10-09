@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Income & Expenditure Statement — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Household Income & Expenditure</h1>
+    <p class="page-subtitle">Operating income, household expenditures, and periodic surplus or deficit</p>
+  </div>
+  <div class="page-actions">
+    <a href="?from_date={{ from_date }}&to_date={{ to_date }}&export=csv" class="btn btn-secondary">📥 Export CSV</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <form method="get" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 180px;">
+      <label for="from_date" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">From Date</label>
+      <input type="date" name="from_date" id="from_date" class="form-control" value="{{ from_date }}">
+    </div>
+    <div style="flex: 1; min-width: 180px;">
+      <label for="to_date" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">To Date</label>
+      <input type="date" name="to_date" id="to_date" class="form-control" value="{{ to_date }}">
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary">Generate Statement</button>
+    </div>
+  </form>
+</div>
+
+<div class="summary-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+  <div class="card">
+    <div class="card-title">Total Income</div>
+    <div class="amount mono" style="font-size: 1.5rem; font-weight: 700; margin-top: 8px; color: var(--color-success, #059669);">₹ {{ report.total_income }}</div>
+    <small class="muted">Operating inflows</small>
+  </div>
+  <div class="card">
+    <div class="card-title">Total Expenditure</div>
+    <div class="amount mono" style="font-size: 1.5rem; font-weight: 700; margin-top: 8px; color: var(--color-danger, #e11d48);">₹ {{ report.total_expense }}</div>
+    <small class="muted">Household outflows</small>
+  </div>
+  <div class="card">
+    <div class="card-title">Net Household Result</div>
+    <div class="amount mono" style="font-size: 1.5rem; font-weight: 700; margin-top: 8px; {% if report.is_surplus %}color: var(--color-success, #059669);{% else %}color: var(--color-danger, #e11d48);{% endif %}">
+      ₹ {{ report.net_surplus }}
+    </div>
+    <small class="muted">{% if report.is_surplus %}Net Surplus{% else %}Net Deficit{% endif %}</small>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-title">Income / Inflows</div>
+  <div class="table-wrap" style="margin-top: 12px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Account Name</th>
+          <th style="text-align: right;">Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in report.income_rows %}
+        <tr>
+          <td class="mono">
+            <a href="{% url 'account_ledger' pk=r.account.pk %}"><strong>{{ r.account.code }}</strong></a>
+          </td>
+          <td>{{ r.account.name }}</td>
+          <td style="text-align: right;" class="mono">₹ {{ r.amount }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3" class="muted" style="text-align: center; padding: 16px;">No income recorded in this period.</td>
+        </tr>
+        {% endfor %}
+        <tr style="background-color: var(--color-bg-subtle, #f9fafb); font-weight: 700; border-top: 2px solid var(--color-border, #e5e7eb);">
+          <td colspan="2">Total Operating Income</td>
+          <td style="text-align: right;" class="mono" style="color: var(--color-success, #059669);">₹ {{ report.total_income }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Expenditures / Outflows</div>
+  <div class="table-wrap" style="margin-top: 12px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Account Name</th>
+          <th style="text-align: right;">Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in report.expense_rows %}
+        <tr>
+          <td class="mono">
+            <a href="{% url 'account_ledger' pk=r.account.pk %}"><strong>{{ r.account.code }}</strong></a>
+          </td>
+          <td>{{ r.account.name }}</td>
+          <td style="text-align: right;" class="mono">₹ {{ r.amount }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3" class="muted" style="text-align: center; padding: 16px;">No expenditures recorded in this period.</td>
+        </tr>
+        {% endfor %}
+        <tr style="background-color: var(--color-bg-subtle, #f9fafb); font-weight: 700; border-top: 2px solid var(--color-border, #e5e7eb);">
+          <td colspan="2">Total Household Expenditures</td>
+          <td style="text-align: right;" class="mono" style="color: var(--color-danger, #e11d48);">₹ {{ report.total_expense }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

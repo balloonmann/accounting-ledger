@@ -1,0 +1,24 @@
+# Proposed deployment configuration; do not apply before provider/budget/release approval.
+# Provision the managed database and restricted runtime role separately.
+services:
+  - type: web
+    name: household-ledger
+    runtime: docker
+    plan: starter
+    autoDeployTrigger: "off"
+    healthCheckPath: /health/
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: DATABASE_URL
+        sync: false
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: TRUST_PROXY_HTTPS
+        value: "1"
+# Migrations require a separate controlled release process with owner credentials.
+# No migration credential is provisioned to this long-lived web service.

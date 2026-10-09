@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "household-ledger"
+version = "0.1.0"
+description = "A household double-entry ledger"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "Django>=5.2,<5.3",
+  "psycopg[binary]>=3.2,<4",
+  "dj-database-url>=3,<4",
+  "python-dotenv>=1.1,<2",
+  "whitenoise>=6.9,<7",
+  "tzdata>=2025.2",
+  "gunicorn>=23,<26; sys_platform != 'win32'",
+]
+
+[tool.setuptools.packages.find]
+include = ["apps*", "config*"]

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Grants: {{ account.code }} — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Manage Grants: {{ account.code }} — {{ account.name }}</h1>
+    <p class="page-subtitle">Configure per-member visibility and posting permissions for this account</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'account_list' %}" class="btn btn-secondary">← Back to Accounts</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-title">Account Visibility Information</div>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 12px;">
+    <div>
+      <span class="muted" style="display: block; font-size: 0.8rem;">Reporting Class</span>
+      <strong>{{ account.get_reporting_class_display }}</strong>
+    </div>
+    <div>
+      <span class="muted" style="display: block; font-size: 0.8rem;">Account Visibility</span>
+      <span class="badge">{{ account.get_visibility_display }}</span>
+    </div>
+    <div>
+      <span class="muted" style="display: block; font-size: 0.8rem;">Owner</span>
+      <strong>{% if account.owner %}{{ account.owner.username }}{% else %}Household (No Owner){% endif %}</strong>
+    </div>
+    <div>
+      <span class="muted" style="display: block; font-size: 0.8rem;">Posting Rule</span>
+      <small class="muted">Posting permission requires view permission (database check constraint enforced).</small>
+    </div>
+  </div>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="card">
+    <div class="card-title">Member Permissions</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Role</th>
+            <th style="text-align: center;">Can View</th>
+            <th style="text-align: center;">Can Post</th>
+            <th>Effective Access</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in member_rows %}
+          <tr>
+            <td>
+              <strong>{{ row.user.username }}</strong>
+              {% if row.is_owner %}<span class="badge" style="margin-left: 6px;">Owner</span>{% endif %}
+            </td>
+            <td>
+              {% if row.is_admin %}
+                <span class="badge badge-admin">Admin</span>
+              {% else %}
+                <span class="badge badge-member">Member</span>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if row.is_admin %}
+                <span class="muted">Always (Admin)</span>
+              {% elif row.is_owner %}
+                <span class="muted">Always (Owner)</span>
+              {% else %}
+                <input type="checkbox" name="view_{{ row.user.pk }}" id="view_{{ row.user.pk }}" {% if row.grant_can_view or account.visibility == "SHARED" %}checked{% endif %}>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if row.is_admin %}
+                <span class="muted">Always (Admin)</span>
+              {% elif row.is_owner %}
+                <span class="muted">Always (Owner)</span>
+              {% else %}
+                <input type="checkbox" name="post_{{ row.user.pk }}" id="post_{{ row.user.pk }}" {% if row.grant_can_post %}checked{% endif %} onchange="if(this.checked) { document.getElementById('view_{{ row.user.pk }}').checked = true; }">
+              {% endif %}
+            </td>
+            <td>
+              {% if row.is_admin %}
+                <span class="badge badge-posted">Full Access</span>
+              {% elif row.is_owner %}
+                <span class="badge badge-posted">Full Access (Owner)</span>
+              {% elif row.can_post %}
+                <span class="badge badge-posted">View & Post</span>
+              {% elif row.can_view %}
+                <span class="badge">View Only</span>
+              {% else %}
+                <span class="badge badge-reversed">No Access</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+      <a href="{% url 'account_list' %}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Grants</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

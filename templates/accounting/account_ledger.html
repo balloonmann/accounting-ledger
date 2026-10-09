@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Ledger: {{ account.code }} — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Ledger: {{ account.code }} — {{ account.name }}</h1>
+    <p class="page-subtitle">Detailed transaction activity, period opening and running balance</p>
+  </div>
+  <div class="page-actions" style="display: flex; gap: 8px;">
+    {% if is_admin %}
+      <a href="{% url 'account_grants' pk=account.pk %}" class="btn btn-secondary btn-sm">Permissions</a>
+      <a href="{% url 'account_edit' pk=account.pk %}" class="btn btn-secondary btn-sm">Edit Account</a>
+    {% endif %}
+    <a href="{% url 'account_list' %}" class="btn btn-secondary btn-sm">← Accounts</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <form method="get" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 160px;">
+      <label for="start_date" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">From Date</label>
+      <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+    </div>
+    <div style="flex: 1; min-width: 160px;">
+      <label for="end_date" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">To Date</label>
+      <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button type="submit" class="btn btn-primary">Filter</button>
+      {% if start_date or end_date %}
+        <a href="{% url 'account_ledger' pk=account.pk %}" class="btn btn-secondary">Clear</a>
+      {% endif %}
+      <a href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}export=csv" class="btn btn-secondary">📥 Export CSV</a>
+    </div>
+  </form>
+</div>
+
+<div class="summary-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+  <div class="card">
+    <div class="card-title">Opening Balance</div>
+    <div class="amount mono" style="font-size: 1.4rem; font-weight: 700; margin-top: 8px;">₹ {{ opening_balance }}</div>
+    <small class="muted">Normal side: {{ account.get_normal_side_display }}</small>
+  </div>
+  <div class="card">
+    <div class="card-title">Period Debits</div>
+    <div class="amount mono" style="font-size: 1.4rem; font-weight: 700; margin-top: 8px; color: var(--color-primary, #4338ca);">₹ {{ total_debit }}</div>
+    <small class="muted">Total debit lines</small>
+  </div>
+  <div class="card">
+    <div class="card-title">Period Credits</div>
+    <div class="amount mono" style="font-size: 1.4rem; font-weight: 700; margin-top: 8px; color: var(--color-primary, #4338ca);">₹ {{ total_credit }}</div>
+    <small class="muted">Total credit lines</small>
+  </div>
+  <div class="card">
+    <div class="card-title">Closing Balance</div>
+    <div class="amount mono" style="font-size: 1.4rem; font-weight: 700; margin-top: 8px; color: var(--color-success, #059669);">₹ {{ closing_balance }}</div>
+    <small class="muted">Running end balance</small>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Transaction Activity</div>
+  <div class="table-wrap" style="margin-top: 12px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Posting #</th>
+          <th>Narration</th>
+          <th>Author</th>
+          <th style="text-align: right;">Debit (₹)</th>
+          <th style="text-align: right;">Credit (₹)</th>
+          <th style="text-align: right;">Running Balance (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background-color: var(--color-bg-subtle, #f9fafb); font-weight: 600;">
+          <td colspan="4"><em>Opening Balance</em></td>
+          <td style="text-align: right;">—</td>
+          <td style="text-align: right;">—</td>
+          <td style="text-align: right;" class="mono">₹ {{ opening_balance }}</td>
+        </tr>
+        {% for row in ledger_rows %}
+        <tr>
+          <td class="mono">{{ row.date|date:"Y-m-d" }}</td>
+          <td class="mono">
+            {% if row.can_view_full %}
+              <a href="{% url 'entry_detail' pk=row.entry.pk %}">#{{ row.posting_number }}</a>
+            {% else %}
+              <span class="muted">#{{ row.posting_number }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if row.can_view_full %}
+              {{ row.narration }}
+            {% else %}
+              <span class="muted" style="font-style: italic;">{{ row.narration }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if row.can_view_full %}
+              {{ row.creator }}
+            {% else %}
+              <span class="muted"><em>{{ row.creator }}</em></span>
+            {% endif %}
+          </td>
+          <td style="text-align: right;" class="mono">
+            {% if row.debit > 0 %}₹ {{ row.debit }}{% else %}—{% endif %}
+          </td>
+          <td style="text-align: right;" class="mono">
+            {% if row.credit > 0 %}₹ {{ row.credit }}{% else %}—{% endif %}
+          </td>
+          <td style="text-align: right;" class="mono">
+            <strong>₹ {{ row.running_balance }}</strong>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 24px;" class="muted">
+            No transactions found for this period.
+          </td>
+        </tr>
+        {% endfor %}
+        <tr style="background-color: var(--color-bg-subtle, #f9fafb); font-weight: 700; border-top: 2px solid var(--color-border, #e5e7eb);">
+          <td colspan="4">Period Totals / Ending Balance</td>
+          <td style="text-align: right;" class="mono">₹ {{ total_debit }}</td>
+          <td style="text-align: right;" class="mono">₹ {{ total_credit }}</td>
+          <td style="text-align: right;" class="mono">₹ {{ closing_balance }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

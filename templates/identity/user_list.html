@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}User Management — Household Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Household Members & Users</h1>
+    <p class="page-subtitle">Manage member credentials, administrator roles, and access status</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'user_create' %}" class="btn btn-primary">+ Add New User</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Date Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr {% if not u.is_active %}style="opacity: 0.6;"{% endif %}>
+          <td>
+            <strong>{{ u.username }}</strong>
+            {% if u.pk == user.pk %}<span class="badge" style="margin-left: 6px;">You</span>{% endif %}
+          </td>
+          <td>
+            {% if u.role == "ADMIN" %}
+              <span class="badge badge-admin">Admin</span>
+            {% else %}
+              <span class="badge badge-member">Member</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge badge-posted">Active</span>
+            {% else %}
+              <span class="badge badge-reversed">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="mono">{{ u.date_joined|date:"Y-m-d" }}</td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'user_edit' pk=u.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+              {% if u.pk != user.pk %}
+              <form method="post" action="{% url 'user_toggle_active' pk=u.pk %}" style="display:inline;">
+                {% csrf_token %}
+                {% if u.is_active %}
+                  <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Deactivate user {{ u.username }}? They will no longer be able to log in.');">Deactivate</button>
+                {% else %}
+                  <button type="submit" class="btn btn-primary btn-sm">Activate</button>
+                {% endif %}
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
