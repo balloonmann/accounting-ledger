@@ -25,12 +25,12 @@ if os.environ.get("TRUST_PROXY_HTTPS") == "1":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
 
 # Rate limiting with django-axes
 INSTALLED_APPS = INSTALLED_APPS + ["axes"]
-MIDDLEWARE = ["axes.middleware.AxesMiddleware"] + MIDDLEWARE
+MIDDLEWARE = MIDDLEWARE + ["axes.middleware.AxesMiddleware"]
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",

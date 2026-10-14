@@ -168,9 +168,7 @@
         {% endfor %}
       </div>
     {% endif %}
-    {% block unauth_content %}
-      {% block content %}{% endblock %}
-    {% endblock %}
+    {% block auth_content %}{% endblock %}
   </main>
   {% endif %}
 
