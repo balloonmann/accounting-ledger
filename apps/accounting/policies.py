@@ -1,6 +1,6 @@
 from django.db.models import Q
 from apps.identity.policies import is_admin
-from .models import Account
+from .models import Account, JournalEntry, JournalLine
 
 
 def visible_accounts(user):
@@ -11,6 +11,25 @@ def visible_accounts(user):
     return Account.objects.filter(
         Q(visibility="SHARED") | Q(owner=user) | Q(grants__user=user, grants__can_view=True)
     ).distinct()
+
+
+def visible_entries(user):
+    """
+    Returns a database-level QuerySet of JournalEntry objects visible to user.
+    Enforces that non-admin users cannot see entries with any line on an account
+    they cannot view, nor empty drafts created by other users.
+    """
+    if not user or not user.is_authenticated or not user.is_active:
+        return JournalEntry.objects.none()
+    if is_admin(user):
+        return JournalEntry.objects.all()
+
+    vis_acc = visible_accounts(user)
+    forbidden_entry_ids = JournalLine.objects.exclude(account__in=vis_acc).values("entry_id")
+    zero_line_other_creators = JournalEntry.objects.filter(lines__isnull=True).exclude(creator=user).values("id")
+
+    return JournalEntry.objects.exclude(id__in=forbidden_entry_ids).exclude(id__in=zero_line_other_creators)
+
 
 
 def postable_accounts(user):

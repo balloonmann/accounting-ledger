@@ -431,3 +431,46 @@ class A20PostingBoundaryPermissionTests(TransactionTestCase):
             post_entry(self.member, draft, 1, uuid.uuid4())
         self.assertIn("posting rights", str(ctx.exception).lower())
         self.assertEqual(JournalEntry.objects.filter(state=EntryState.POSTED).count(), 0)
+
+    def test_settings_lock_date_renders_activity_records_cleanly(self):
+        """
+        Regression guardrail: settings_lock_date view must order ActivityRecord
+        by -created_at without FieldError.
+        """
+        from django.test import Client
+        from apps.operations.models import ActivityRecord
+        ActivityRecord.objects.create(
+            actor=self.admin,
+            action="SET_LOCK_DATE",
+            object_type="LedgerSettings",
+            object_id="1",
+            metadata={"locked_through": "2026-03-31", "reason": "Monthly close test"},
+        )
+        client = Client()
+        client.force_login(self.admin)
+        response = client.get(reverse("settings_lock_date"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Monthly close test")
+
+    def test_visible_entries_query_scoping(self):
+        """
+        Regression guardrail: visible_entries scopes queries at the DB level,
+        hiding entries that touch accounts invisible to member.
+        """
+        from apps.accounting.policies import visible_entries
+        # self.savings is private to admin (no grant for member)
+        draft = create_draft(
+            self.admin,
+            "2026-04-06",
+            "Secret admin entry",
+            EntryKind.JOURNAL,
+            [
+                {"account_id": self.cash.pk, "debit": Decimal("100.00"), "credit": Decimal("0.00")},
+                {"account_id": self.savings.pk, "debit": Decimal("0.00"), "credit": Decimal("100.00")},
+            ],
+        )
+        # Visible to admin
+        self.assertTrue(visible_entries(self.admin).filter(pk=draft.pk).exists())
+        # Invisible to member at DB level
+        self.assertFalse(visible_entries(self.member).filter(pk=draft.pk).exists())
+

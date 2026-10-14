@@ -139,6 +139,9 @@ class JournalLine(models.Model):
 
     class Meta:
         ordering = ["line_number"]
+        indexes = [
+            models.Index(fields=["entry"], name="journalline_entry_idx"),
+        ]
         constraints = [
             models.UniqueConstraint(fields=["entry", "line_number"], name="unique_entry_line"),
             models.CheckConstraint(condition=Q(line_number__gte=1), name="line_number_positive"),

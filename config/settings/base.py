@@ -65,14 +65,29 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = 28800
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 X_FRAME_OPTIONS = "DENY"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
 EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
 LOGGING = {
-    "version": 1, "disable_existing_loggers": False,
-    "formatters": {"safe": {"format": "{levelname} {name} {message}", "style": "{"}},
-    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "safe"}},
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "safe": {"format": "{levelname} {name} {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "safe"},
+    },
     "root": {"handlers": ["console"], "level": "WARNING"},
+    "loggers": {
+        "apps": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
 }
+

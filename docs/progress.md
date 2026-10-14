@@ -288,4 +288,38 @@ All 82 tests across accounting, identity, reporting, and operations suites pass 
 - **M5b (Hosted Cloud Provisioning):** Actual remote provisioning on Render or another managed cloud provider, DNS setup, and live remote multi-device smoke verification remain gated awaiting explicit owner approval and budget selection.
 - **M6 (Pilot Release & Real-Data Migration):** Pilot release walkthrough and real-data migration remain gated until user sign-off.
 
+---
+
+## Security Audit Remediation (14 October 2026)
+
+Following a comprehensive read-only security and database architecture audit across 16 areas, all code-level findings have been resolved and manual remediation runbooks established.
+
+### Code & Configuration Remediations Implemented
+
+1. **FIX-2 (Lock Date Audit Log FieldError):** Fixed field name from nonexistent `timestamp` to `created_at` in `apps/accounting/views.py` (`settings_lock_date`).
+2. **FIX-3 (Narration & Version Database Immutability):** Created migration `0005_freeze_narration.py` updating trigger function `accounting_posted_entry_immutable()` to freeze `narration` and `version` on all POSTED entries at the PostgreSQL level.
+3. **FIX-4 (Login Rate Limiting):** Integrated `django-axes` (v7.1.0), regenerated universal `requirements.lock` with SHA-256 hashes using `uv`, and configured lockout rules (5 attempts, 1-hour cooldown) in `config/settings/production.py`.
+4. **FIX-5 (CI Deployment Check):** Enhanced `.github/workflows/ci.yml` to run `python manage.py check --deploy --settings config.settings.production` with strict security verification.
+5. **FIX-6 (JournalLine Foreign Key Index):** Added explicit `journalline_entry_idx` index on `JournalLine.entry` in `apps/accounting/models.py` and created migration `0006_journalline_entry_idx.py`.
+6. **FIX-7 (Login Attempt Audit Logging):** Implemented `apps/identity/signals.py` connecting `user_logged_in` and `user_login_failed` Django signals to record audit entries in `ActivityRecord` with IP addresses.
+7. **FIX-8 (Service Logging Config):** Configured `apps.*` logger to `INFO` level in `config/settings/base.py` LOGGING dictionary.
+8. **FIX-9 (Content Security Policy):** Integrated `django-csp` (v3.8) in `config/settings/production.py` enforcing strict source policies, form actions, and frame-ancestors restrictions.
+9. **FIX-10 (HSTS Hardening):** Increased `SECURE_HSTS_SECONDS` to `31536000` (1 year) with `SECURE_HSTS_PRELOAD = True` in `config/settings/production.py`.
+10. **FIX-11 (Automated Daily Backups):** Created Windows PowerShell task runner `scripts/backup_task.ps1` with 30-day retention pruning and documented Task Scheduler setup in `docs/operations/backup_runbook.md`.
+11. **FIX-12 (Database Queryset Scoping):** Replaced Python-level in-memory list filtering in `draft_list`, `entry_list`, and `home` recent entries with DB-level `visible_entries(user)` queryset scoping.
+12. **FIX-13 (Automated Dependency Vulnerability Scanning):** Added `pip-audit` automated dependency scanning to `.github/workflows/ci.yml`.
+13. **FIX-14 (CI Secrets Sanitization):** Removed hardcoded database passwords from `.github/workflows/ci.yml`, replacing with secret-backed `${{ secrets.CI_PG_PASSWORD }}`.
+14. **FIX-15 (Session Expiration Controls):** Added `SESSION_COOKIE_AGE = 28800` (8 hours) and `SESSION_EXPIRE_AT_BROWSER_CLOSE = True` in `config/settings/base.py`.
+15. **FIX-16 (Automated Deployment Migrations):** Added `releaseCommand: python manage.py migrate` to `render.yaml`.
+16. **FIX-17 (Disaster Recovery Verification):** Enhanced `scripts/restore.py` to assert database integrity triggers presence, sequence integrity, and `ledger_app` role privileges.
+17. **FIX-18 (Referrer & Nosniff Security Headers):** Configured `SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"` and `SECURE_CONTENT_TYPE_NOSNIFF = True` in `config/settings/production.py`.
+18. **FIX-20 (Admin MFA / TOTP Roadmap):** Documented architecture decision record in `docs/decisions/0007-admin-mfa.md` for `django-otp` TOTP enforcement prior to real-data deployment.
+19. **Default Secrets Path Update:** Updated `scripts/backup.py` and `scripts/restore.py` to read credentials by default from `C:\Users\Harshit\ledger_secrets\.env.migration`.
+20. **Regression Guardrail Tests:** Added regression tests in `apps/identity/tests.py` and `apps/accounting/tests/test_permissions_m3.py` for login signal recording, `visible_entries` DB scoping, and `settings_lock_date` activity rendering.
+
+### User Action Items (OS / Manual Level)
+- **FIX-1:** Move `.env.migration` out of OneDrive into `C:\Users\Harshit\ledger_secrets\.env.migration` and rotate the `ledger_migrator` password.
+- **FIX-19:** Move the local working directory outside of OneDrive (e.g. `C:\projects\accounting_ledger`).
+
+
 

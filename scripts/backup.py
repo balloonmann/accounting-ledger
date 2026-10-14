@@ -61,7 +61,14 @@ def get_db_config(env_file_path: Path):
     }
 
 
-def create_backup(output_dir: Path, env_file: Path = ROOT / ".env.migration") -> Path:
+DEFAULT_ENV_FILE = (
+    Path.home() / "ledger_secrets" / ".env.migration"
+    if (Path.home() / "ledger_secrets" / ".env.migration").exists()
+    else ROOT / ".env.migration"
+)
+
+
+def create_backup(output_dir: Path, env_file: Path = DEFAULT_ENV_FILE) -> Path:
     """Executes pg_dump in custom format and returns the backup file path."""
     output_dir.mkdir(parents=True, exist_ok=True)
     cfg = get_db_config(env_file)
@@ -111,7 +118,7 @@ def create_backup(output_dir: Path, env_file: Path = ROOT / ".env.migration") ->
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create a PostgreSQL database backup for Household Ledger.")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "backups", help="Directory where backup is stored.")
-    parser.add_argument("--env-file", type=Path, default=ROOT / ".env.migration", help="Path to env file containing DB URL.")
+    parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE, help="Path to env file containing DB URL.")
 
     args = parser.parse_args()
     try:

@@ -37,6 +37,7 @@ from .policies import (
     can_view_entry,
     postable_accounts,
     visible_accounts,
+    visible_entries,
 )
 from .services import (
     AuthorizationError,
@@ -74,10 +75,13 @@ def home(request):
     drafts_count = drafts_count.count()
 
     # Get recent visible posted entries
-    recent_entries = [
-        entry for entry in JournalEntry.objects.filter(state=EntryState.POSTED).order_by("-date", "-posting_number")[:20]
-        if can_view_entry(request.user, entry)
-    ][:8]
+    recent_entries = (
+        visible_entries(request.user)
+        .filter(state=EntryState.POSTED)
+        .select_related("creator", "reversal_of")
+        .prefetch_related("lines__account")
+        .order_by("-date", "-posting_number")[:8]
+    )
 
     return render(request, "accounting/home.html", {
         "book": book,
@@ -424,9 +428,13 @@ def entry_journal(request):
 
 @login_required
 def draft_list(request):
-    drafts = JournalEntry.objects.filter(state=EntryState.DRAFT).select_related("creator").prefetch_related("lines__account").order_by("-date", "-created_at")
-    if not is_admin(request.user):
-        drafts = [d for d in drafts if can_view_entry(request.user, d)]
+    drafts = (
+        visible_entries(request.user)
+        .filter(state=EntryState.DRAFT)
+        .select_related("creator")
+        .prefetch_related("lines__account")
+        .order_by("-date", "-created_at")
+    )
 
     return render(request, "accounting/draft_list.html", {"drafts": drafts})
 
@@ -541,14 +549,15 @@ def draft_post(request, pk):
 
 @login_required
 def entry_list(request):
-    all_posted = JournalEntry.objects.filter(state=EntryState.POSTED).select_related(
-        "creator", "reversal_of"
-    ).prefetch_related("lines__account").order_by("-date", "-posting_number")
+    entries = (
+        visible_entries(request.user)
+        .filter(state=EntryState.POSTED)
+        .select_related("creator", "reversal_of")
+        .prefetch_related("lines__account")
+        .order_by("-date", "-posting_number")
+    )
 
-    # Filter to entries the user can view
-    visible = [e for e in all_posted if can_view_entry(request.user, e)]
-
-    return render(request, "accounting/entry_list.html", {"entries": visible})
+    return render(request, "accounting/entry_list.html", {"entries": entries})
 
 
 @login_required
@@ -704,7 +713,7 @@ def settings_lock_date(request):
     settings_obj = LedgerSettings.objects.first()
     recent_logs = ActivityRecord.objects.filter(
         action="SET_LOCK_DATE"
-    ).order_by("-timestamp")[:10]
+    ).order_by("-created_at")[:10]
 
     if request.method == "POST":
         form = LockDateForm(request.POST)

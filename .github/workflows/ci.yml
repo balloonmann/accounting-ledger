@@ -11,11 +11,14 @@ jobs:
     name: Lint, Migrations & Isolated PostgreSQL Tests
     runs-on: ubuntu-latest
 
+    env:
+      CI_PG_PASSWORD: ${{ secrets.CI_PG_PASSWORD || 'ci_isolated_test_runner_pw' }}
+
     services:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_PASSWORD: ci_super_password_12345
+          POSTGRES_PASSWORD: ${{ secrets.CI_PG_PASSWORD || 'ci_isolated_test_runner_pw' }}
           POSTGRES_DB: ledger_test_control
         ports:
           - 5432:5432
@@ -40,16 +43,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install --require-hashes -r requirements.lock
 
-      - name: Verify Django system integrity
+      - name: Audit dependencies for known security vulnerabilities
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.lock
+
+      - name: Verify Django deployment security integrity
         run: |
           DJANGO_SECRET_KEY=ci-dummy-key-minimum-50-characters-long-12345678901234567890 \
-          DATABASE_URL=postgresql://postgres:ci_super_password_12345@127.0.0.1:5432/ledger_test_control \
-          python manage.py check
+          DATABASE_URL=postgresql://postgres:${{ env.CI_PG_PASSWORD }}@127.0.0.1:5432/ledger_test_control \
+          ALLOWED_HOSTS=ci.internal \
+          CSRF_TRUSTED_ORIGINS=https://ci.internal \
+          python manage.py check --deploy --settings config.settings.production
 
       - name: Verify no uncommitted migrations
         run: |
           DJANGO_SECRET_KEY=ci-dummy-key-minimum-50-characters-long-12345678901234567890 \
-          DATABASE_URL=postgresql://postgres:ci_super_password_12345@127.0.0.1:5432/ledger_test_control \
+          DATABASE_URL=postgresql://postgres:${{ env.CI_PG_PASSWORD }}@127.0.0.1:5432/ledger_test_control \
           python manage.py makemigrations --check --dry-run
 
       - name: Run automated test suite with isolated roles

@@ -82,3 +82,32 @@ class UserAdministrationViewTests(TestCase):
         self.assertEqual(r_toggle2.status_code, 302)
         self.member.refresh_from_db()
         self.assertTrue(self.member.is_active)
+
+
+class LoginAuditSignalTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="audit_user", password="CorrectPassword123!", role="MEMBER")
+        self.client = Client()
+
+    def test_login_success_records_activity(self):
+        from apps.operations.models import ActivityRecord
+        response = self.client.post(reverse("login"), {
+            "username": "audit_user",
+            "password": "CorrectPassword123!",
+        })
+        self.assertEqual(response.status_code, 302)
+        rec = ActivityRecord.objects.filter(action="LOGIN_SUCCESS", actor=self.user).first()
+        self.assertIsNotNone(rec)
+        self.assertEqual(rec.metadata.get("username"), "audit_user")
+
+    def test_login_failure_records_activity(self):
+        from apps.operations.models import ActivityRecord
+        response = self.client.post(reverse("login"), {
+            "username": "audit_user",
+            "password": "WrongPassword!",
+        })
+        self.assertEqual(response.status_code, 200)
+        rec = ActivityRecord.objects.filter(action="LOGIN_FAILED").first()
+        self.assertIsNotNone(rec)
+        self.assertEqual(rec.metadata.get("username"), "audit_user")
+

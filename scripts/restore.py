@@ -56,10 +56,17 @@ def get_server_config(env_file_path: Path):
     }
 
 
+DEFAULT_ENV_FILE = (
+    Path.home() / "ledger_secrets" / ".env.migration"
+    if (Path.home() / "ledger_secrets" / ".env.migration").exists()
+    else ROOT / ".env.migration"
+)
+
+
 def restore_database(
     dump_file: Path,
     target_db: str,
-    env_file: Path = ROOT / ".env.migration",
+    env_file: Path = DEFAULT_ENV_FILE,
     allow_primary_overwrite: bool = False,
 ):
     """Restores database from dump file into target_db and verifies integrity."""
@@ -147,6 +154,32 @@ def restore_database(
             cur.execute("SELECT count(*) FROM identity_user WHERE is_active = true")
             users_count = cur.fetchone()[0]
 
+            # Check database triggers presence
+            cur.execute("""
+                SELECT tgname FROM pg_trigger
+                WHERE tgname IN ('posted_entry_immutable', 'posted_lines_immutable', 'check_posted_balance')
+            """)
+            triggers_found = {row[0] for row in cur.fetchall()}
+            expected_triggers = {'posted_entry_immutable', 'posted_lines_immutable', 'check_posted_balance'}
+            missing_triggers = expected_triggers - triggers_found
+
+            # Check posting sequence presence
+            cur.execute("""
+                SELECT sequence_name FROM information_schema.sequences
+                WHERE sequence_name = 'accounting_posting_number_seq'
+            """)
+            has_sequence = cur.fetchone() is not None
+
+            # Check ledger_app role grants if role exists
+            cur.execute("SELECT 1 FROM pg_roles WHERE rolname = 'ledger_app'")
+            ledger_app_exists = cur.fetchone() is not None
+            ledger_app_granted = True
+            if ledger_app_exists:
+                cur.execute("""
+                    SELECT has_table_privilege('ledger_app', 'accounting_journalentry', 'SELECT, INSERT, UPDATE')
+                """)
+                ledger_app_granted = cur.fetchone()[0]
+
     print("=" * 60)
     print("RESTORATION INTEGRITY VERIFICATION:")
     print(f"  Target Database:        {target_db}")
@@ -157,12 +190,22 @@ def restore_database(
     print(f"  Total Credits:          INR {total_cr}")
     is_balanced = (total_dr == total_cr)
     print(f"  Debits == Credits:      {'✓ BALANCED' if is_balanced else '✗ IMBALANCED'}")
+    print(f"  Integrity Triggers:     {'✓ ALL PRESENT' if not missing_triggers else f'✗ MISSING: {missing_triggers}'}")
+    print(f"  Posting Sequence:       {'✓ PRESENT' if has_sequence else '✗ MISSING'}")
+    if ledger_app_exists:
+        print(f"  Role 'ledger_app' Privs: {'✓ GRANTED' if ledger_app_granted else '✗ REVOKED'}")
     print("=" * 60)
 
     if not is_balanced:
         raise RuntimeError("Restored database verification failed: Debits do not equal Credits!")
     if accounts_count == 0:
         raise RuntimeError("Restored database verification failed: No accounts found!")
+    if missing_triggers:
+        raise RuntimeError(f"Restored database verification failed: Missing database triggers: {missing_triggers}")
+    if not has_sequence:
+        raise RuntimeError("Restored database verification failed: Sequence 'accounting_posting_number_seq' missing!")
+    if ledger_app_exists and not ledger_app_granted:
+        raise RuntimeError("Restored database verification failed: Role 'ledger_app' lacks required table privileges!")
 
     print(f"Restore rehearsal to '{target_db}' passed all integrity checks.")
 
@@ -171,7 +214,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Restore a PostgreSQL database dump for Household Ledger.")
     parser.add_argument("--dump-file", type=Path, required=True, help="Path to the .dump file to restore.")
     parser.add_argument("--target-db", type=str, required=True, help="Target database name (must be a test/recovery database).")
-    parser.add_argument("--env-file", type=Path, default=ROOT / ".env.migration", help="Path to env file.")
+    parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE, help="Path to env file.")
     parser.add_argument(
         "--dangerously-allow-primary-db-overwrite",
         action="store_true",
