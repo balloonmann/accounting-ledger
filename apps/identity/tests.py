@@ -111,3 +111,26 @@ class LoginAuditSignalTests(TestCase):
         self.assertIsNotNone(rec)
         self.assertEqual(rec.metadata.get("username"), "audit_user")
 
+    def test_full_login_and_logout_cycle(self):
+        # 1. GET /login/
+        res = self.client.get(reverse("login"))
+        self.assertEqual(res.status_code, 200)
+
+        # 2. POST /login/ with valid credentials and follow redirect to home
+        res = self.client.post(reverse("login"), {
+            "username": "audit_user",
+            "password": "CorrectPassword123!",
+        }, follow=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.context["user"].is_authenticated)
+
+        # 3. POST /logout/ and follow redirect to login
+        res = self.client.post(reverse("logout"), follow=True)
+        self.assertEqual(res.status_code, 200)
+
+        # 4. GET /logout/ is rejected with 405 Method Not Allowed (CSRF safety requirement)
+        res = self.client.get(reverse("logout"))
+        self.assertEqual(res.status_code, 405)
+
+
+

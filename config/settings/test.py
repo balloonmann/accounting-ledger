@@ -20,4 +20,5 @@ ALLOWED_HOSTS = ["testserver", "localhost", "127.0.0.1"]
 DATABASES["default"]["TEST"] = {"NAME": "test_household_ledger"}
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 WHITENOISE_USE_FINDERS = True
+AXES_ENABLED = False
 TEST_RUNNER = "config.test_runner.LedgerTestRunner"

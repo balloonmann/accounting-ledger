@@ -28,17 +28,6 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
 
-# Rate limiting with django-axes
-INSTALLED_APPS = INSTALLED_APPS + ["axes"]
-MIDDLEWARE = MIDDLEWARE + ["axes.middleware.AxesMiddleware"]
-AUTHENTICATION_BACKENDS = [
-    "axes.backends.AxesStandaloneBackend",
-    "django.contrib.auth.backends.ModelBackend",
-]
-AXES_FAILURE_LIMIT = 5
-AXES_COOLOFF_TIME = 1  # 1 hour lockout after 5 consecutive failures
-AXES_RESET_ON_SUCCESS = True
-
 # Content Security Policy with django-csp
 MIDDLEWARE = MIDDLEWARE + ["csp.middleware.CSPMiddleware"]
 CSP_DEFAULT_SRC = ("'self'",)

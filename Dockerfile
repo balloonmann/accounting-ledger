@@ -9,4 +9,5 @@ RUN DJANGO_SECRET_KEY=build-only-placeholder-never-used-to-serve-real-requests-1
     DJANGO_SETTINGS_MODULE=config.settings.production ALLOWED_HOSTS=localhost \
     python manage.py collectstatic --noinput
 USER 10001
-CMD ["sh", "-c", "exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --access-logfile - --error-logfile -"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --access-logfile - --error-logfile -"]
+

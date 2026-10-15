@@ -25,6 +25,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
+    "axes",
     "apps.identity", "apps.accounting", "apps.reporting", "apps.operations",
 ]
 MIDDLEWARE = [
@@ -36,7 +37,15 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
+AUTHENTICATION_BACKENDS = [
+    "apps.identity.backends.RateLimitAxesBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1  # 1 hour lockout after 5 consecutive failures
+AXES_RESET_ON_SUCCESS = True
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 TEMPLATES = [{

@@ -316,10 +316,21 @@ Following a comprehensive read-only security and database architecture audit acr
 18. **FIX-20 (Admin MFA / TOTP Roadmap):** Documented architecture decision record in `docs/decisions/0007-admin-mfa.md` for `django-otp` TOTP enforcement prior to real-data deployment.
 19. **Default Secrets Path Update:** Updated `scripts/backup.py` and `scripts/restore.py` to read credentials by default from `C:\Users\Harshit\ledger_secrets\.env.migration`.
 20. **Regression Guardrail Tests:** Added regression tests in `apps/identity/tests.py` and `apps/accounting/tests/test_permissions_m3.py` for login signal recording, `visible_entries` DB scoping, and `settings_lock_date` activity rendering.
+21. **FIX-21 (Login & Logout 500 Server Error Resolution):**
+    - **Root Cause Analysis:** On container deployments, `axes` tables (`axes_accessattempt`, `axes_accesslog`) were unmigrated because `releaseCommand` is only invoked when deployed via Render Blueprints (not manual Web Service deployments), triggering 500 database errors on `authenticate()` (login) and `user_logged_out` signal (logout). In addition, `AxesStandaloneBackend` threw unhandled `AxesBackendRequestParameterRequired` exceptions whenever `request` was None (programmatic authentication/tests).
+    - **Remediation:**
+      1. Updated `Dockerfile` CMD to run `python manage.py migrate --noinput` prior to Gunicorn boot, guaranteeing that schema updates always apply before serving requests.
+      2. Moved `axes` into `INSTALLED_APPS` and `MIDDLEWARE` in `config/settings/base.py` for uniform migration tracking across all environments.
+      3. Implemented `RateLimitAxesBackend` in `apps/identity/backends.py` to gracefully fall through when `request is None`, preserving full rate-limiting during HTTP requests without crashing non-request authentication flows.
+      4. Set `AXES_ENABLED = False` in `config/settings/test.py` to isolate test runners from rate limiting.
+      5. Added `templates/registration/logged_out.html` template.
+      6. Added `test_full_login_and_logout_cycle` in `apps/identity/tests.py` and fixed `savings` fixture in `apps/accounting/tests/test_permissions_m3.py`.
+    - **Verification:** All 105 automated tests passed on isolated PostgreSQL (exit code 0); `python manage.py check --deploy` passed with zero issues.
 
 ### User Action Items (OS / Manual Level)
 - **FIX-1:** Move `.env.migration` out of OneDrive into `C:\Users\Harshit\ledger_secrets\.env.migration` and rotate the `ledger_migrator` password.
 - **FIX-19:** Move the local working directory outside of OneDrive (e.g. `C:\projects\accounting_ledger`).
+
 
 
 

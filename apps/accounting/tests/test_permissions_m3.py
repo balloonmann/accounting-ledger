@@ -458,7 +458,7 @@ class A20PostingBoundaryPermissionTests(TransactionTestCase):
         hiding entries that touch accounts invisible to member.
         """
         from apps.accounting.policies import visible_entries
-        # self.savings is private to admin (no grant for member)
+        savings = make_account("SAVINGS_20", visibility=Visibility.PERSONAL, owner=self.admin)
         draft = create_draft(
             self.admin,
             "2026-04-06",
@@ -466,7 +466,7 @@ class A20PostingBoundaryPermissionTests(TransactionTestCase):
             EntryKind.JOURNAL,
             [
                 {"account_id": self.cash.pk, "debit": Decimal("100.00"), "credit": Decimal("0.00")},
-                {"account_id": self.savings.pk, "debit": Decimal("0.00"), "credit": Decimal("100.00")},
+                {"account_id": savings.pk, "debit": Decimal("0.00"), "credit": Decimal("100.00")},
             ],
         )
         # Visible to admin
