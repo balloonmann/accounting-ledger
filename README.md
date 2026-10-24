@@ -1,7 +1,7 @@
 # Household Ledger ERP
 https://household-ledger-5sqb.onrender.com/login/
 
-Credentials: Username - member_demo
+Demo Credentials: Username - member_demo
              Password - M@mbar123
 
 A double-entry household accounting system built with Django 5.2, PostgreSQL 18, and psycopg 3, following the Household Accounting ERP Functional Requirements Document and Build Bible.
